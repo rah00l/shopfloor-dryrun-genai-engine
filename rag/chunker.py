@@ -32,7 +32,7 @@ def chunk_markdown(filepath: str) -> List[Dict]:
         - section_title: the ## header text (for citation)
     """
     with open(filepath, "r") as f:
-        content = f.read()
+        content = "\n" + f.read()
 
     filename = os.path.basename(filepath)
     parts = re.split(r"\n## ", content)
