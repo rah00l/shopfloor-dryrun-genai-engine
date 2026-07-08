@@ -8,11 +8,12 @@ Design decisions:
       so the embedding captures both the concept name AND the explanation
 
     Why enrichment matters:
-    Without it, the chunk for PARTIAL RECONCILED contains only the explanation
-    text — the words "PARTIAL RECONCILED" appear once at most. With enrichment,
-    the embedding model sees "PARTIAL RECONCILED: A payment file shows PARTIAL
-    RECONCILED when..." — anchoring the vector on both the term and its meaning.
-    This measurably improves retrieval accuracy for direct-term questions.
+    Without it, the chunk for WI-4.2 Torque Specifications contains only the
+    explanation text — the words "torque specification" appear once at most.
+    With enrichment, the embedding model sees "WI-4.2 Torque Specifications
+    Reference: Standard torque specifications for..." — anchoring the vector
+    on both the term and its meaning. This measurably improves retrieval
+    accuracy for direct-term questions.
 """
 
 import os

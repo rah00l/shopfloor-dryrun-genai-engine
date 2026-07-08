@@ -1,5 +1,5 @@
 """
-RAG (Retrieval-Augmented Generation) module for ReconPilot AI.
+RAG (Retrieval-Augmented Generation) module for the ShopFloor GenAI Engine.
 
 Usage:
     from rag.pipeline import rag_query

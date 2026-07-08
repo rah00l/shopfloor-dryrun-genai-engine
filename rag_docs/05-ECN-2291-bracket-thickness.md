@@ -1,6 +1,6 @@
 ## ECN-2291 Door Hinge Bracket Thickness Change
 
-Change: Door hinge bracket thickness increased from 2mm to 2.5mm on Model Y, effective immediately for all new production.
+Change: Door hinge bracket thickness increased from 2mm to 2.5mm on Model AX-500, effective immediately for all new production.
 
 Reason: Field reports of bracket flex under load, root cause identified in RCA-2026-014, originally flagged under QA-2026-009.
 

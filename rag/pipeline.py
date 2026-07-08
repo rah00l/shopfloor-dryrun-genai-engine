@@ -34,7 +34,7 @@ _collection: Optional[chromadb.Collection] = None
 
 
 SYSTEM_PROMPT = (
-    "You are a payment reconciliation assistant for ReconPilot AI. "
+    "You are a manufacturing knowledge assistant for shop floor operations. "
     "Answer the user's question using ONLY the context provided below. "
     "If the context is clearly unrelated to the question and does not help answer it, "
     "say: 'I don't have enough information in my knowledge base to answer this.'"
@@ -164,62 +164,3 @@ def rag_query(question: str, top_k: int = 3) -> Dict:
             for chunk in retrieved
         ]
     }
-
-
-# ============================================================
-# Standalone test — initialize + run test questions
-# ============================================================
-if __name__ == "__main__":
-    print("Initializing RAG pipeline...")
-    count = initialize()
-    print(f"Loaded {count} chunks from handbook docs")
-    print("=" * 60)
-
-    test_questions = [
-        # Paraphrased — should find PARTIAL RECONCILED
-        "Why is this file showing as done but not really done?",
-
-        # Paraphrased — should find Fix/Investigate or Missing bucket info
-        "Where do I go to manually sort out transactions that didn't auto-match?",
-
-        # Paraphrased — should find tenancy ADV ID not created scenario
-        "The campaign for this tenancy doesn't exist yet in the system — what do I do?",
-
-        # Paraphrased — should find Aggregator Tran ID Not Found
-        "Why can't the system find a match even though I can see the transaction in the network's report?",
-
-        # Paraphrased — should find invoice date vs payment date
-        "Which date actually matters for when we count the money as received?",
-
-        # Paraphrased — should find Paid bucket / OK classification
-        "What needs to be true for something to count as fully settled?",
-
-        # Paraphrased — should find tenancy partial payment
-        "We only got half the sponsorship money this month — how does that get handled?",
-
-        # Paraphrased — should find Invalid Sale
-        "The sale amount field is broken in the file — what happens to that transaction?",
-
-        # Paraphrased — should find reconciliation timing/reversals
-        "How long does a sale need to survive before we count on getting commission for it?",
-
-        # Paraphrased — should find TRAN RECONCILE vs FULL RECONCILE
-        "Can I close out just the transactions and deal with the tenancy stuff later?",
-    ]
-
-    for i, question in enumerate(test_questions, 1):
-        print(f"\n{'=' * 60}")
-        print(f"Q{i}: {question}")
-        print("-" * 60)
-
-        result = rag_query(question)
-
-        print(f"Sources:")
-        for src in result["sources"]:
-            quality = "STRONG" if src["distance"] < 0.4 else "OK" if src["distance"] < 0.6 else "WEAK"
-            print(f"  [{quality}] {src['document']} > {src['section']} (dist: {src['distance']})")
-
-        print(f"\nAnswer: {result['answer'][:300]}...")
-
-    print(f"\n{'=' * 60}")
-    print("All 10 test questions complete.")

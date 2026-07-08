@@ -3,7 +3,7 @@ RAG Evaluation Harness
 
 Purpose:
     Automated pass/fail test for retrieval quality.
-    Runs 10 paraphrased questions, checks whether the correct chunk
+    Runs paraphrased questions, checks whether the correct chunk
     was retrieved as the top-1 result for each.
 
     This replaces manual curl testing with a reproducible,
@@ -34,63 +34,57 @@ CONFIDENCE_THRESHOLD = 0.7
 TEST_CASES = [
     {
         "id": "Q1",
-        "question": "Why is this file showing as done but not really done?",
-        "expected_section": "Pending Queue And Weekly Reminders",
-        "expected_doc": "reconcile-buttons.md"
+        "question": "What is the torque spec for the door hinge bracket?",
+        "expected_section": "WI-4.2 Torque Specifications Reference, Model AX-500 Door Hardware",
+        "expected_doc": "02-WI-4.2-torque-specifications.md"
     },
     {
         "id": "Q2",
-        "question": "Where do I go to manually sort out transactions that didn't auto-match?",
-        "expected_section": "Missing Bucket",
-        "expected_doc": "bucket-classification.md"
+        "question": "What are the steps to install the door hinge bracket?",
+        "expected_section": "SOP-3.1 Bracket Installation, Assembly Line 2, Station 4",
+        "expected_doc": "01-SOP-3.1-bracket-installation.md"
     },
     {
         "id": "Q3",
-        "question": "The campaign for this tenancy doesn't exist yet in the system — what do I do?",
-        "expected_section": "Tenancy Fee Paid But Campaign Not Created Yet",
-        "expected_doc": "tenancy-settlement-rules.md"
+        "question": "Why did the bracket thickness change?",
+        "expected_section": "ECN-2291 Door Hinge Bracket Thickness Change",
+        "expected_doc": "05-ECN-2291-bracket-thickness.md"
     },
     {
         "id": "Q4",
-        "question": "Why can't the system find a match even though I can see the transaction in the network's report?",
-        "expected_section": "Transaction Not Found",
-        "expected_doc": "missing-reason-codes.md"
+        "question": "What caused the Line 2 bracket flex issue?",
+        "expected_section": "RCA-2026-014 Line 2 Stoppage, Door Hinge Bracket Flex",
+        "expected_doc": "06-RCA-2026-014-bracket-flex.md"
     },
     {
         "id": "Q5",
-        "question": "Which date actually matters for when we count the money as received?",
-        "expected_section": "Invoice Date Versus Payment Date",
-        "expected_doc": "reconciliation-lifecycle.md"
+        "question": "Is there an active quality alert for the bracket?",
+        "expected_section": "QA-2026-009 Quality Alert, Door Hinge Bracket Flex, Model AX-500",
+        "expected_doc": "04-QA-2026-009-quality-alert.md"
     },
     {
         "id": "Q6",
-        "question": "What needs to be true for something to count as fully settled?",
-        "expected_section": "FULL RECONCILED",
-        "expected_doc": "file-status-states.md"
+        "question": "How often should the Station 4 fixture be recalibrated?",
+        "expected_section": "MM-Station4 Fixture Preventive Maintenance Schedule",
+        "expected_doc": "03-MM-station4-fixture-maintenance.md"
     },
     {
         "id": "Q7",
-        "question": "We only got half the sponsorship money this month — how does that get handled?",
-        "expected_section": "Tenancy Fee Partial Payment",
-        "expected_doc": "tenancy-settlement-rules.md"
+        "question": "How much belt deflection is acceptable during tensioner inspection?",
+        "expected_section": "SOP-7.4 Conveyor Belt Tensioner Inspection, Assembly Line 5, Station 2",
+        "expected_doc": "07-SOP-7.4-conveyor-tensioner-inspection.md"
     },
     {
         "id": "Q8",
-        "question": "The sale amount field is broken in the file — what happens to that transaction?",
-        "expected_section": "Invalid Sale Value",
-        "expected_doc": "missing-reason-codes.md"
+        "question": "Is there a known issue with the Line 5 conveyor?",
+        "expected_section": "QA-2026-021 Quality Alert, Conveyor Belt Slippage, Assembly Line 5",
+        "expected_doc": "08-QA-2026-021-conveyor-slippage.md"
     },
     {
         "id": "Q9",
-        "question": "How long does a sale need to survive before we count on getting commission for it?",
-        "expected_section": "Partial Returns And Order Modifications",
-        "expected_doc": "commission-adjustments.md"
-    },
-    {
-        "id": "Q10",
-        "question": "Can I close out just the transactions and deal with the tenancy stuff later?",
-        "expected_section": "TRAN RECONCILE Purpose",
-        "expected_doc": "reconcile-buttons.md"
+        "question": "What tools are needed for the tensioner inspection?",
+        "expected_section": "SOP-7.4 Conveyor Belt Tensioner Inspection, Assembly Line 5, Station 2",
+        "expected_doc": "07-SOP-7.4-conveyor-tensioner-inspection.md"
     },
 ]
 
@@ -130,10 +124,7 @@ def run_eval():
             got_doc = top_result["source_doc"]
             distance = top_result["distance"]
 
-            # Check: did we get the right section?
             section_match = got_section == tc["expected_section"]
-
-            # Check: is the distance below threshold?
             confident = distance < CONFIDENCE_THRESHOLD
 
             if section_match and confident:
@@ -143,7 +134,7 @@ def run_eval():
             elif section_match and not confident:
                 status = "WEAK PASS"
                 reason = f"Correct section but low confidence (dist: {distance:.4f} > {CONFIDENCE_THRESHOLD})"
-                passed += 1  # Still counts as pass — right answer, just not confident
+                passed += 1
             else:
                 status = "FAIL"
                 reason = f"Expected [{tc['expected_section']}] but got [{got_section}]"
@@ -159,14 +150,12 @@ def run_eval():
         }
         results.append(result)
 
-        # Print each result
-        icon = "✅" if "PASS" in status else "❌"
+        icon = "PASS" if "PASS" in status else "FAIL"
         print(f"\n{tc['id']}: \"{tc['question'][:60]}...\"")
         print(f"    Expected: {tc['expected_section']}")
         print(f"    Got:      {result['got']} (dist: {distance:.4f})" if distance else f"    Got: NONE")
-        print(f"    {icon} {status}" + (f" — {reason}" if reason else ""))
+        print(f"    [{icon}] {status}" + (f" — {reason}" if reason else ""))
 
-    # Summary
     print(f"\n{'=' * 70}")
     print(f"Results: {passed}/{total} passed")
 
@@ -180,12 +169,6 @@ def run_eval():
     return passed, total, results
 
 
-# ============================================================
-# Run it
-# ============================================================
 if __name__ == "__main__":
     passed, total, results = run_eval()
-
-    # Exit with non-zero code if any tests failed
-    # (useful if you ever wire this into CI/CD)
     exit(0 if passed == total else 1)
