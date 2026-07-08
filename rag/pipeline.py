@@ -10,6 +10,7 @@ Design decisions:
     - Source citations are returned alongside every answer
     - temperature=0.0 for deterministic, non-creative responses
     - Graceful fallback: if no relevant context found, says so explicitly
+    - Cache (CAG) is checked before retrieval; a cache hit skips retrieval + LLM entirely
 """
 
 import os
@@ -22,6 +23,7 @@ from rag.chunker import chunk_all_docs
 from rag.embedder import embed_texts
 from rag.store import load_collection, get_collection, get_client
 from rag.retriever import retrieve
+from rag import cache
 
 load_dotenv()
 
@@ -75,7 +77,7 @@ def initialize(docs_dir: str = "rag_docs", persistent: bool = True) -> int:
 
 def rag_query(question: str, top_k: int = 3) -> Dict:
     """
-    Full RAG pipeline: retrieve relevant chunks → build grounded prompt → call LLM.
+    Full RAG pipeline: check cache → retrieve relevant chunks → build grounded prompt → call LLM.
 
     Args:
         question: the user's natural language question
@@ -86,8 +88,14 @@ def rag_query(question: str, top_k: int = 3) -> Dict:
             - answer: the LLM's grounded response
             - sources: list of {document, section, distance} for citation
             - retrieved_chunks: list of {section_title, distance, preview} for debugging
+            - from_cache: whether this result was served from cache
     """
     global _collection
+
+    # Check cache first (CAG) — skip retrieval + LLM entirely on a hit
+    cached = cache.get(question)
+    if cached is not None:
+        return {**cached, "from_cache": True}
 
     if _collection is None:
         # Try to connect to existing collection (if initialize() was called earlier)
@@ -97,13 +105,14 @@ def rag_query(question: str, top_k: int = 3) -> Dict:
             return {
                 "answer": "The knowledge base has not been initialized. Please restart the service.",
                 "sources": [],
-                "retrieved_chunks": []
+                "retrieved_chunks": [],
+                "from_cache": False
             }
 
-# Step 1: Retrieve relevant chunks
+    # Step 1: Retrieve relevant chunks
     retrieved = retrieve(question, collection=_collection, top_k=top_k)
 
-    # Confidence gate: if best retrieval is too distant, refuse early
+    # Confidence gate: if best retrieval is too distant, refuse early (not cached)
     CONFIDENCE_THRESHOLD = 0.7
     if retrieved and retrieved[0]["distance"] > CONFIDENCE_THRESHOLD:
         return {
@@ -116,9 +125,9 @@ def rag_query(question: str, top_k: int = 3) -> Dict:
                     "preview": chunk["text"][:100]
                 }
                 for chunk in retrieved
-            ]
+            ],
+            "from_cache": False
         }
-
 
     # Step 2: Build grounded prompt
     context_parts = []
@@ -135,7 +144,6 @@ def rag_query(question: str, top_k: int = 3) -> Dict:
         })
 
     context_block = "\n\n---\n\n".join(context_parts)
-
     user_prompt = f"Context:\n{context_block}\n\nQuestion: {question}"
 
     # Step 3: Call LLM
@@ -151,8 +159,8 @@ def rag_query(question: str, top_k: int = 3) -> Dict:
 
     answer = response.choices[0].message.content
 
-    # Step 4: Return structured result
-    return {
+    # Step 4: Build result, cache it, then return
+    result = {
         "answer": answer,
         "sources": sources,
         "retrieved_chunks": [
@@ -164,3 +172,5 @@ def rag_query(question: str, top_k: int = 3) -> Dict:
             for chunk in retrieved
         ]
     }
+    cache.set(question, result)
+    return {**result, "from_cache": False}

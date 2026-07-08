@@ -80,5 +80,6 @@ def analyze(payload: AnalyzeRequest):
         "explanation": result["answer"],
         "sources": result["sources"],
         "concept": result["retrieved_chunks"][0]["section_title"] if result["sources"] else None,
+        "from_cache": result.get("from_cache", False),
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
