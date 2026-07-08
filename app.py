@@ -7,6 +7,7 @@ import os
 import uuid
 
 from rag.pipeline import initialize, rag_query
+from rag.sop_chain import generate_sop
 
 load_dotenv()
 
@@ -24,6 +25,10 @@ class AnalyzeRequest(BaseModel):
     question: Optional[str] = None
     context: Optional[Dict[str, Any]] = {}
     session_id: Optional[str] = None
+
+
+class SopRequest(BaseModel):
+    change_text: Optional[str] = None
 
 
 @app.get("/health")
@@ -81,5 +86,32 @@ def analyze(payload: AnalyzeRequest):
         "sources": result["sources"],
         "concept": result["retrieved_chunks"][0]["section_title"] if result["sources"] else None,
         "from_cache": result.get("from_cache", False),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@app.post("/generate-sop")
+def generate_sop_endpoint(payload: SopRequest):
+    change_text = payload.change_text
+
+    if not change_text or not change_text.strip():
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "change_text is required", "code": "INVALID_INPUT"}
+        )
+
+    try:
+        result = generate_sop(change_text)
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "sop_generation_failed", "code": "ENGINE_ERROR", "message": str(e)}
+        )
+
+    return {
+        "status": "ok",
+        "draft_sop": result["draft"],
+        "reference_docs": result["reference_docs"],
+        "grounded": result["grounded"],
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
